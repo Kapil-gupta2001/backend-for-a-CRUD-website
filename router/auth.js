@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 require('../db/conn');
 const User= require('../models/userSchema');
+const bcrypt = require('bcryptjs');
 
 //storing dta through promises 
 // router.post('/register',(req,res)=>{
@@ -56,22 +57,27 @@ router.post('/login',async(req,res)=>{
     const {email,password}=req.body;
 
     if(!email || !password){
-        return res.status(401).send("Invalid credentials")
+        return res.status(401).send("Inv credentials")
     }
 
     try{
-        const userExist= await User.findOne({email:email}&&{password:password});  
-            if(userExist){
+        const userExist= await User.findOne({email:email});
+        if(userExist){
+            const isMatch = await bcrypt.compare(password,userExist.password);
+            if(!isMatch){
+                return res.status(401).send("invalid credentials");
+            }else{
                 const token=await userExist.generateAuthToken();
                 console.log(token);
-                res.cookie("jwtoken",token,{
-                    expires:new Date(Date.now()+2589000000),
-                });
+                    res.cookie("jwtoken",token,{
+                        expires:new Date(Date.now()+2589000000),
+                    });
                 return res.status(200).send("Login succesfull");
+                }         
+            }   
+            else{
+                return res.status(401).send("invalid credentials");   
             }
-                
-            else
-            return res.status(401).send("Invalid credentials")
 
     }catch(err){
         console.log(err)
